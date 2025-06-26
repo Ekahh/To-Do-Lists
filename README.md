@@ -40,7 +40,7 @@ Aplikasi Todo List yang dikembangkan dengan arsitektur microservice menggunakan 
 ## Struktur Project
 
 ```
-PPLBS-To-Do-Lists/
+To-Do-Lists/
 ├── client/                 # React Frontend
 │   ├── public/
 │   ├── src/
@@ -54,30 +54,30 @@ PPLBS-To-Do-Lists/
 ├── server/                 # Node.js Backend
 │   ├── config/             # Database & Passport config
 │   ├── controllers/        # Route controllers
-│   ├── database/           # Konfigurasi database
+│   ├── database/           # Konfigurasi database & init.sql
 │   ├── middleware/         # Custom middleware
 │   ├── models/             # Database models
 │   ├── routes/             # API routes
-│   ├── services/           # External services
+│   ├── services/           # External services (RabbitMQ)
 │   └── .env
 │   └── Dockerfile
 │   └── package-lock.json
 │   └── package.json
 │   └── server.js
-├── docker-compose.yml     # Docker configuration
+├── docker-compose.yml      # Docker configuration
 └── README.md
 ```
 
 ## Instalasi dan Setup
 
-### Prerequisites
+### Prasyarat
 
 - Docker Desktop
 - Node.js 18+
 - MySQL 8.0+
 - RabbitMQ 3.8+
 
-### Cara 1: Menggunakan Docker (Recommended)
+### Cara 1: Menggunakan Docker (Rekomendasi)
 
 1. **Clone repository**
 
@@ -86,12 +86,28 @@ PPLBS-To-Do-Lists/
    cd To-Do-Lists
    ```
 
-2. **Setup environment variables**
+2. **Buat file environment variable untuk backend**
 
-   ```bash
-   cp env.example .env
-   # Edit .env file dengan konfigurasi yang sesuai
+   Buat file `.env` di folder `server/` dengan contoh isi:
+
+   ```env
+   DB_HOST=db
+   DB_USER=appuser
+   DB_PASSWORD=appuser
+   DB_NAME=todo_app
+   RABBITMQ_URL=amqp://rabbitmq
+   JWT_SECRET=todo_app_secret_key_2024
+   CLIENT_URL=http://localhost:3000
+   GOOGLE_CALLBACK_URL=http://localhost:5000/auth/google/callback
+   GOOGLE_CLIENT_ID=isi_dengan_client_id_google
+   GOOGLE_CLIENT_SECRET=isi_dengan_client_secret_google
+   NODE_ENV=development
+   DB_CONNECTION_LIMIT=10
+   DB_ACQUIRE_TIMEOUT=60000
+   DB_TIMEOUT=60000
    ```
+
+   > **Catatan:** Untuk development, Anda bisa menggunakan credential Google OAuth dummy jika hanya ingin testing lokal.
 
 3. **Jalankan dengan Docker Compose**
 
@@ -104,30 +120,26 @@ PPLBS-To-Do-Lists/
    - Backend API: http://localhost:5000
    - RabbitMQ Management: http://localhost:15672 (guest/guest)
 
-### Cara 2: Development Local
+### Cara 2: Jalankan Secara Lokal (Development)
 
 1. **Setup Database**
 
    ```bash
-   # Install MySQL dan buat database
-   mysql -u root -p < setup-database.sql
+   # Install MySQL dan buat database serta tabel
+   mysql -u root -p < server/database/init.sql
    ```
 
 2. **Setup RabbitMQ**
 
-   ```bash
-   # Install RabbitMQ
-   # Default credentials: admin/admin123
-   ```
+   - Install RabbitMQ (default credentials: guest/guest)
 
 3. **Setup Backend**
 
    ```bash
    cd server
    npm install
-   cp ../env.example .env
-   # Edit .env file
-   npm run dev
+   # Buat file .env seperti contoh di atas
+   node server.js
    ```
 
 4. **Setup Frontend**
@@ -136,6 +148,11 @@ PPLBS-To-Do-Lists/
    npm install
    npm start
    ```
+   > **Catatan:** Jika ingin mengubah URL backend, buat file `.env` di folder `client/` dan tambahkan:
+   >
+   > ```env
+   > REACT_APP_API_URL=http://localhost:5000
+   > ```
 
 ## API Endpoints
 
@@ -176,7 +193,7 @@ Content-Type: application/json
 ```json
 {
   "message": "Token generated successfully",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "<jwt_token>",
   "user": {
     "id": 1,
     "email": "test@example.com",
@@ -190,7 +207,7 @@ Content-Type: application/json
 **Headers:**
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer <jwt_token>
 Content-Type: application/json
 ```
 
@@ -232,39 +249,11 @@ PATCH http://localhost:5000/todos/1/status
 
 ## Database Schema
 
-### Users Table
+Lihat file `server/database/init.sql` untuk skema lengkap. Tabel utama:
 
-```sql
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    google_id VARCHAR(255) UNIQUE NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    name VARCHAR(255),
-    picture VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
-
-### Todos Table
-
-```sql
-CREATE TABLE IF NOT EXISTS todos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    deadline DATETIME,
-    status ENUM('pending', 'in_progress', 'completed') DEFAULT 'pending',
-    priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
-    user_id INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_status (user_id, status),
-    INDEX idx_deadline (deadline)
-);
-
-```
+- `users`
+- `todos`
+- (opsional) `categories`, `todo_categories`
 
 ## RabbitMQ Queues
 
@@ -303,12 +292,14 @@ node server.js
 **Frontend:**
 
 ```bash
-npm start      # Development server
+npm start        # Development server
 ```
 
 ### Environment Variables
 
-Buat file `.env` di folder server dengan variabel berikut:
+**Backend:** Lihat contoh pada bagian setup di atas.
+
+**Frontend:** (opsional, jika ingin override API URL)
 
 ```env
 DB_HOST=db
@@ -325,6 +316,7 @@ NODE_ENV=development
 DB_CONNECTION_LIMIT=10
 DB_ACQUIRE_TIMEOUT=60000
 DB_TIMEOUT=60000
+REACT_APP_API_URL=http://localhost:5000
 ```
 
 ## Troubleshooting
@@ -344,14 +336,10 @@ DB_TIMEOUT=60000
 
 ```bash
 # 1. Periksa database connection
-node debug-server.js
-
 # 2. Setup database jika belum
-mysql -u root -p < setup-database.sql
-
+mysql -u root -p < server/database/init.sql
 # 3. Periksa .env file di folder server
 cat server/.env
-
 # 4. Restart server
 cd server
 npm run dev
@@ -366,7 +354,7 @@ npm run dev
 #### 3. RabbitMQ Connection Error
 
 - Pastikan RabbitMQ berjalan
-- Periksa credentials (default: admin/admin123)
+- Periksa credentials (default: guest/guest)
 - Periksa port 5672 tidak terblokir
 
 #### 4. JWT Token Error
@@ -392,6 +380,7 @@ npm run dev
 2. **Test Database Connection**
 
    ```bash
+   # Jalankan backend dan cek log koneksi database
    node debug-server.js
    ```
 
