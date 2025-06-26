@@ -2,6 +2,13 @@
 
 Aplikasi Todo List yang dikembangkan dengan arsitektur microservice menggunakan React, Node.js, MySQL, Docker, dan RabbitMQ.
 
+# Anggota Kelompok
+
+1. Redrian Alfa Maulana (2210511133)
+2. Muhammad Ardy Cahya (2210511145)
+3. Muhammmad Haykal Islam Baskoro (2210511149)
+4. Noer Fauzan Detya GUlfiar (2210511151)
+
 ## Fitur Utama
 
 - ✅ **Autentikasi JWT** dengan Google OAuth
