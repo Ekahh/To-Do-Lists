@@ -7,7 +7,7 @@ Aplikasi Todo List yang dikembangkan dengan arsitektur microservice menggunakan 
 1. Redrian Alfa Maulana (2210511133)
 2. Muhammad Ardy Cahya (2210511145)
 3. Muhammmad Haykal Islam Baskoro (2210511149)
-4. Noer Fauzan Detya GUlfiar (2210511151)
+4. Noer Fauzan Detya Gulfiar (2210511151)
 
 ## Fitur Utama
 
